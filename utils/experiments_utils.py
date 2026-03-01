@@ -216,6 +216,7 @@ def save_traj(
         aatype = None,
         chain_index = None,
         residue_index = None,
+        sample_ranges = None,
     ):
     """Writes final sample and reverse diffusion trajectory.
 
@@ -263,6 +264,23 @@ def save_traj(
         no_indexing=True,
         aatype=aatype,
     )
+
+    if sample_ranges:
+        # Add PDB remarks for H chains (chain A) and L chains (chain B)
+        remarks = []
+        for label in ['H1', 'H2', 'H3']:
+            if label in sample_ranges:
+                residues = sample_ranges[label]
+                for res_num in residues:
+                    remarks.append(f"REMARK PDBinfo-LABEL: {res_num:>3d} A {label}")
+        for label in ['L1', 'L2', 'L3']:
+            if label in sample_ranges:
+                residues = sample_ranges[label]
+                for res_num in residues:
+                    remarks.append(f"REMARK PDBinfo-LABEL: {res_num:>3d} B {label}")
+        with open(sample_path, 'a') as f:
+            f.write('\n' + '\n'.join(remarks) + '\n')
+
     prot_traj_path = au.write_prot_to_pdb(
         bb_prot_traj,
         prot_traj_path,

@@ -104,6 +104,10 @@ python train.py experiment.optimizer.lr=0.0005  # (Optional) parameter override
    python inference.py weight_path=<PATH_TO_WEIGHTS> inference_dir=<OUTPUT_DIR>
    ```
 
+### Demo
+We provide an easy‑to‑run demo for epitope‑specific antibody design in the `run_demo.ipynb`.  
+In this demo, you are required to provide a PDB file containing your target antigen.
+The antibody design starts from the trastuzumab Fv fragment, from which the model resamples the CDR loops while preserving the framework structure, enabling de novo redesign of antibodies that bind the antigen in diverse binding modes.
 
 
 

@@ -133,6 +133,7 @@ class Interpolant:
 
     def apply_cfg(self, pred_trans_1, neg_pred_trans_1, pred_rotmats_1, neg_pred_rotmats_1, gd_scale):
         pred_trans_1 = pred_trans_1 + gd_scale * (pred_trans_1 - neg_pred_trans_1)
+        pred_rotmats_1 = so3_utils.geodesic_t(1.0 + gd_scale, pred_rotmats_1, neg_pred_rotmats_1)
         return pred_trans_1, pred_rotmats_1
 
     def sample(self, model, batch, num_timesteps=None, trans_0=None, rotmats_0=None, ts=None, seed=None):
@@ -227,6 +228,7 @@ class Interpolant:
                 t_1 = t_2
                 pbar.update(1)
 
+
         # We only integrated to min_t, so need to make a final step
         t_1 = ts[-1]
         trans_t_1, rotmats_t_1 = prot_traj[-1]
@@ -259,6 +261,9 @@ class Interpolant:
             neg_pred_trans_1 = neg_model_out['pred_trans']
             neg_pred_rotmats_1 = neg_model_out['pred_rotmats']
             pred_trans_1, pred_rotmats_1 = self.apply_cfg(pred_trans_1, neg_pred_trans_1, pred_rotmats_1, neg_pred_rotmats_1, cfg_gd_sched[i])
+
+        pred_trans_1 = _trans_diffuse_mask(pred_trans_1, trans_1, diffuse_mask)
+        pred_rotmats_1 = _rots_diffuse_mask(pred_rotmats_1, rotmats_1, diffuse_mask)
 
         clean_traj.append((pred_trans_1.detach().cpu(), pred_rotmats_1.detach().cpu()))
         prot_traj.append((pred_trans_1, pred_rotmats_1))

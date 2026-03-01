@@ -376,14 +376,16 @@ class FlowModule(LightningModule):
             **self._exp_cfg.optimizer
         )
 
-    def predict_step(self, batch, batch_idx):
-
+    def predict_step(self, batch, batch_idx, is_demo=False, sample_dir='', sample_ranges=None, _inference_num_per_sample=1):
         device = f'cuda:{torch.cuda.current_device()}'
         interpolant = Interpolant(self._infer_cfg) 
         interpolant.set_device(device)
 
-        sample_name = batch['file_path'][0]
-        sample_dir = os.path.join(self.inference_dir, sample_name)
+        if sample_dir:
+            sample_dir = sample_dir
+        else:
+            sample_name = batch['file_path'][0]
+            sample_dir = os.path.join(self.inference_dir, sample_name)
         os.makedirs(sample_dir, exist_ok=True)
 
         aatype = du.to_numpy(batch['aatype'].long())[0]
@@ -391,8 +393,8 @@ class FlowModule(LightningModule):
         residue_index = du.to_numpy(batch['residue_index'].long())[0]
         diffuse_mask = du.to_numpy(batch['diffuse_mask'])[0]
 
-        for i in range(self._inference_num_per_sample):
-            atom37_traj, model_traj, _ = interpolant.sample(self.model, batch, seed=batch_idx+i)
+        if is_demo:
+            atom37_traj, model_traj, _ = interpolant.sample(self.model, batch)
             bb_traj = du.to_numpy(torch.stack(atom37_traj, dim=0).transpose(0, 1))[0]
             _ = eu.save_traj(
                 bb_traj[-1],
@@ -400,8 +402,26 @@ class FlowModule(LightningModule):
                 np.flip(du.to_numpy(torch.concat(model_traj, dim=0)), axis=0),
                 diffuse_mask=diffuse_mask,
                 output_dir=sample_dir,
-                sidx=i,
+                sidx=batch_idx,
                 aatype=aatype,
                 chain_index=chain_index,
                 residue_index=residue_index,
+                sample_ranges=sample_ranges,
             )
+            
+        else:
+            for i in range(_inference_num_per_sample):
+                atom37_traj, model_traj, _ = interpolant.sample(self.model, batch, seed=batch_idx+i)
+                bb_traj = du.to_numpy(torch.stack(atom37_traj, dim=0).transpose(0, 1))[0]
+                _ = eu.save_traj(
+                    bb_traj[-1],
+                    bb_traj,
+                    np.flip(du.to_numpy(torch.concat(model_traj, dim=0)), axis=0),
+                    diffuse_mask=diffuse_mask,
+                    output_dir=sample_dir,
+                    sidx=i,
+                    aatype=aatype,
+                    chain_index=chain_index,
+                    residue_index=residue_index,
+                    sample_ranges=sample_ranges,
+                )

@@ -22,7 +22,7 @@ Rigid = ru.Rigid
 Protein = protein.Protein
 
 # Global map from chain characters to integers.
-ALPHANUMERIC = string.ascii_letters + string.digits + ' '
+ALPHANUMERIC = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz' + string.digits + ' '
 CHAIN_TO_INT = {chain_char: i for i, chain_char in enumerate(ALPHANUMERIC)}
 INT_TO_CHAIN = {i: chain_char for i, chain_char in enumerate(ALPHANUMERIC)}
 NM_TO_ANG_SCALE = 10.0
@@ -447,7 +447,7 @@ def get_gt_value_from_pdb(file_path, centering=False):
     return complex_feats
 
 
-def get_gt14_value_from_pdb(file_path, num_atom, centering=False):
+def get_gt14_value_from_pdb(file_path, num_atom=4, centering=False):
     parser = PDB.PDBParser(QUIET=True)
     if file_path[-4:] == '.pdb':
         structure = parser.get_structure(os.path.basename(file_path).split('_')[0], file_path)

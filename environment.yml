@@ -4,6 +4,7 @@ channels:
   - nvidia
   - pyg
   - conda-forge
+  - bioconda
   - defaults
 dependencies:
   - python=3.10
@@ -16,6 +17,8 @@ dependencies:
   - pandas
   - scipy
   - scikit-learn
+  - hmmer
+  - anarci
   - tqdm
   - pip
   - pip:
@@ -29,3 +32,4 @@ dependencies:
       - gputil
       - tmtools
       - dm-tree
+      - py3Dmol
