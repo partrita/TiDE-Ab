@@ -1,11 +1,22 @@
-# TiDE-Ab: De Novo Epitope-Specific Antibody Design via $SE(3)$ Flow Matching with Time-Dependent Guidance
-
-TiDE-Ab introduces a robust generative framework for de novo epitope-specific antibody design.
-By leveraging Conditional $SE(3)$ Flow Matching and a novel Time-Dependent Classifier-Free Guidance (TD-CFG) strategy, TiDE-Ab generates physically plausible antibody backbones and accurate global binding poses without relying on pre-aligned templates.
-Our approach employs a dynamic guidance schedule that prioritizes global docking cues in the early generative stages and facilitates local structural refinement in later stages, effectively eliminating the steric clashes and trajectory instabilities common in static guidance methods.
+### Official pytorch implementation of TiDE-Ab (ECCB 2026)
+---
 
 ![TiDE-Ab Overview](assets/architecture.png)
 
+> #### Title: &nbsp;&nbsp;&nbsp;&nbsp;&emsp; De Novo Epitope-Specific Antibody Design via Time-Dependent Guidance [[Paper](https://academic.oup.com/bioinformatics/article/42/Supplement_2/btag455/8767312)]<br>
+> #### Authors: &nbsp; Yunji Kim, Minkyung Baek 
+
+#### Abstract
+
+We propose TiDE-Ab, a conditional SE(3) flow matching framework for de novo epitope-specific antibody design.
+By conditioning on unpaired antigen and antibody structures without any pre-aligned frame, TiDE-Ab inherits the structural stability of flow matching while enabling global binding pose search from scratch. 
+To further improve epitope targeting, we introduce Time-Dependent Classifier-Free Guidance (TD-CFG), which replaces static conditioning with an adaptive schedule: strong guidance early to establish the global binding pose, followed by gradual relaxation for precise local CDR
+refinement.
+On 55 non-redundant benchmark complexes, TiDE-Ab outperforms RFantibody with higher epitope recall (0.935 vs. 0.878) and over 95% fewer steric clashes.
+In therapeutic case studies on TGF-β and IL-17A, TiDE-Ab reproduced the binding profiles of clinical antibodies across isoform-selective and cross-reactive epitopes, whereas RFantibody consistently failed to produce viable candidates.
+
+
+---
 
 ## 💊 Therapeutic Case Studies
 
@@ -114,3 +125,7 @@ The antibody design starts from the trastuzumab Fv fragment, from which the mode
 ## 🙏 Acknowledgements
 
 This codebase is developed based on the [**FrameFlow**](https://github.com/microsoft/protein-frame-flow/tree/main) repository. We thank the original authors for their pioneering work on $SE(3)$ flow matching for protein structures.
+
+
+
+This project is licensed under the MIT License - see the LICENSE file for details.
