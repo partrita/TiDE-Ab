@@ -181,32 +181,49 @@ def process_model_input(antigen_pdb, cdr_loop_lengths, antibody_pdb, hotspot_res
     cdr_info = _read_cdr_from_pdb(antibody_pdb)
     parser = PDBParser(QUIET=True)
 
-    # Prepare antibody chains (H->A, L->B) and antigen chains
+    # Prepare antibody chains and antigen chains
     ab_struct = parser.get_structure('ab', antibody_pdb)
+    ab_orig_chains = list(ab_struct[0].get_chains())
+    is_vhh = len(ab_orig_chains) == 1
+
     ab_chains_renamed = []
-    chain_map = {'H': 'A', 'L': 'B'}
-    for orig_chain in ab_struct[0].get_chains():
-        new_chain_id = chain_map.get(orig_chain.id, orig_chain.id)
-        new_chain = Chain.Chain(new_chain_id)
-        for idx, residue in enumerate(orig_chain.get_residues(), start=1):
+    if is_vhh:
+        # VHH: single heavy chain renamed to 'A'
+        chain = ab_orig_chains[0]
+        new_chain = Chain.Chain('A')
+        for idx, residue in enumerate(chain.get_residues(), start=1):
             new_res = residue.copy()
             new_res.id = (' ', idx, ' ')
             new_chain.add(new_res)
         ab_chains_renamed.append(new_chain)
+    else:
+        # Standard antibody (Fv): H->A, L->B
+        chain_map = {'H': 'A', 'L': 'B'}
+        for orig_chain in ab_orig_chains:
+            new_chain_id = chain_map.get(orig_chain.id, orig_chain.id)
+            new_chain = Chain.Chain(new_chain_id)
+            for idx, residue in enumerate(orig_chain.get_residues(), start=1):
+                new_res = residue.copy()
+                new_res.id = (' ', idx, ' ')
+                new_chain.add(new_res)
+            ab_chains_renamed.append(new_chain)
 
     ag_struct = parser.get_structure('ag', antigen_pdb)
     ag_chains = list(ag_struct[0].get_chains())
 
     # Extract and concatenate chain features
+    # For VHH: antibody=0, antigen=1. For standard Fv: antibody=(0, 1), antigen=2
+    target_chain_idx = 1 if is_vhh else 2
     all_chains = ab_chains_renamed + ag_chains
-    struct_feats = [dataclasses.asdict(parsers.process_chain(chain, i)) for i, chain in enumerate(all_chains)]
+    struct_feats = []
+    for i, chain in enumerate(all_chains):
+        c_idx = i if i < target_chain_idx else target_chain_idx
+        struct_feats.append(dataclasses.asdict(parsers.process_chain(chain, c_idx)))
     complex_feats = _concat_features(struct_feats)
 
     # Calculate lengths and create masks
     n_total_res = len(complex_feats['residue_index'])
-    h_len = len(list(ab_chains_renamed[0].get_residues()))
-    l_len = len(list(ab_chains_renamed[1].get_residues()))
-    ab_total_len = h_len + l_len
+    ab_total_len = sum(len(list(c.get_residues())) for c in ab_chains_renamed)
 
     all_cdr_residues = [res for res_list in cdr_info.values() for res in res_list]
     framework_mask = np.ones(n_total_res, dtype=bool)
@@ -256,10 +273,10 @@ def process_model_input(antigen_pdb, cdr_loop_lengths, antibody_pdb, hotspot_res
     framework_ranges = eu.ranges(framework_indices)
     cdr_ranges = eu.ranges(cdr_indices)
 
-    cdr_names = ['H1', 'H2', 'H3', 'L1', 'L2', 'L3']
+    cdr_names = ['H1', 'H2', 'H3'] if is_vhh else ['H1', 'H2', 'H3', 'L1', 'L2', 'L3']
     sample_ranges = {}
     for idx, cdr_name in enumerate(cdr_names):
-        if idx < len(cdr_ranges):
+        if idx < len(cdr_ranges) and cdr_name in cdr_loop_lengths:
             start_idx, end_idx = cdr_ranges[idx]
             length_spec = cdr_loop_lengths[cdr_name]
             target_len = np.random.randint(*length_spec) if isinstance(length_spec, tuple) else length_spec
@@ -329,8 +346,9 @@ def quantitative_evaluation(batch_, sample_path):
     seq_len = batch_['res_mask'].shape[0]
     chain_indices = batch_['chain_index'].cpu().numpy()
 
-    ab_mask = chain_indices < 2
-    num_ab_res = ab_mask.sum()
+    # Determine antibody boundary: diffused residues belong to the designed antibody/VHH
+    diffuse_mask = batch_['diffuse_mask'].cpu().numpy().astype(bool)
+    num_ab_res = diffuse_mask.sum()
     num_ag_res = seq_len - num_ab_res
 
     gt_hotspot = batch_['hotspot_1d'][num_ab_res:].cpu().numpy()
@@ -342,8 +360,8 @@ def quantitative_evaluation(batch_, sample_path):
     pred_bb_positions = torch.tensor(pred_data['bb_positions'])
     pred_chain_index = pred_data['chain_index']
 
-    pred_ab_mask = pred_chain_index < 2
-    pred_num_ab_res = pred_ab_mask.sum()
+    # In prediction PDB, antibody is chain A (and B if Fv); antigen chains follow
+    pred_num_ab_res = num_ab_res
 
     pred_ab_pos = pred_bb_positions[:pred_num_ab_res]
     pred_ag_pos = pred_bb_positions[pred_num_ab_res:]
@@ -553,6 +571,7 @@ def visualize_output(sample_path: str, width=1000, height=600):
 
             is_epitope = (chain_id, res_num) in epitope_residues
             is_cdr = (chain_id, res_num) in cdr_residues
+            # For VHH, antibody is chain A; for Fv, chains A and B
             ab_chains = {"A", "B"}
             is_ab = chain_id in ab_chains
 

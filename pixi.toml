@@ -1,0 +1,42 @@
+[workspace]
+authors = ["deepthought <deepthough@postech.ac.kr>"]
+channels = ["pytorch", "nvidia", "pyg", "conda-forge", "bioconda"]
+name = "tideab"
+platforms = ["linux-64"]
+version = "0.1.0"
+
+[tasks]
+train = "python train.py"
+inference = "python inference.py"
+jupyter = "jupyter lab --no-browser"
+
+[dependencies]
+python = "3.10.*"
+pytorch = { version = "2.4.0.*", channel = "pytorch" }
+torchvision = { version = "0.19.0.*", channel = "pytorch" }
+pytorch-cuda = { version = "12.4.*", channel = "pytorch" }
+pytorch-scatter = { version = "*", channel = "pyg" }
+numpy = "<2.0.0"
+pandas = "*"
+scipy = "*"
+scikit-learn = "*"
+hmmer = "*"
+anarci = "*"
+tqdm = "*"
+pip = "*"
+jupyter = "*"
+ipykernel = "*"
+
+[pypi-dependencies]
+wandb = "*"
+pytorch-lightning = "*"
+hydra-core = "*"
+omegaconf = "*"
+biopython = "*"
+mdtraj = "*"
+einops = "*"
+gputil = "*"
+tmtools = "*"
+dm-tree = "*"
+py3dmol = "*"
+matplotlib = ">=3.10.9, <4"

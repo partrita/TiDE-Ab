@@ -1,28 +1,23 @@
 ### Official pytorch implementation of TiDE-Ab (ECCB 2026)
+
 ---
 
 ![TiDE-Ab Overview](assets/architecture.png)
 
 > #### Title: &nbsp;&nbsp;&nbsp;&nbsp;&emsp; De Novo Epitope-Specific Antibody Design via Time-Dependent Guidance [[Paper](https://academic.oup.com/bioinformatics/article/42/Supplement_2/btag455/8767312)]<br>
-> #### Authors: &nbsp; Yunji Kim, Minkyung Baek 
+>
+> #### Authors: &nbsp; Yunji Kim, Minkyung Baek
 
 #### Abstract
 
-We propose TiDE-Ab, a conditional SE(3) flow matching framework for de novo epitope-specific antibody design.
-By conditioning on unpaired antigen and antibody structures without any pre-aligned frame, TiDE-Ab inherits the structural stability of flow matching while enabling global binding pose search from scratch. 
-To further improve epitope targeting, we introduce Time-Dependent Classifier-Free Guidance (TD-CFG), which replaces static conditioning with an adaptive schedule: strong guidance early to establish the global binding pose, followed by gradual relaxation for precise local CDR
-refinement.
-On 55 non-redundant benchmark complexes, TiDE-Ab outperforms RFantibody with higher epitope recall (0.935 vs. 0.878) and over 95% fewer steric clashes.
-In therapeutic case studies on TGF-β and IL-17A, TiDE-Ab reproduced the binding profiles of clinical antibodies across isoform-selective and cross-reactive epitopes, whereas RFantibody consistently failed to produce viable candidates.
+We propose TiDE-Ab, a conditional SE(3) flow matching framework for de novo epitope-specific antibody design. By conditioning on unpaired antigen and antibody structures without any pre-aligned frame, TiDE-Ab inherits the structural stability of flow matching while enabling global binding pose search from scratch. To further improve epitope targeting, we introduce Time-Dependent Classifier-Free Guidance (TD-CFG), which replaces static conditioning with an adaptive schedule: strong guidance early to establish the global binding pose, followed by gradual relaxation for precise local CDR refinement. On 55 non-redundant benchmark complexes, TiDE-Ab outperforms RFantibody with higher epitope recall (0.935 vs. 0.878) and over 95% fewer steric clashes. In therapeutic case studies on TGF-β and IL-17A, TiDE-Ab reproduced the binding profiles of clinical antibodies across isoform-selective and cross-reactive epitopes, whereas RFantibody consistently failed to produce viable candidates.
 
-
----
+> **💡 Modality Support:**  
+> In addition to standard antibodies (paired heavy and light chain Fv fragments), TiDE-Ab supports **VHH (single-domain antibodies / Nanobodies)**. The training set includes over 770 single-domain antibody complexes, allowing direct de novo design of VHH binders against specified epitopes. *(Note: Linear / scaffold-free peptides are not supported as the model requires an antibody framework).*
 
 ## 💊 Therapeutic Case Studies
 
-TiDE-Ab demonstrates high practical utility by navigating complex therapeutic design scenarios that require programmable binding specificity.
-By successfully targeting a wide range of user-defined epitopes on the same antigen —from highly selective patches to broad conserved surfaces— TiDE-Ab ensures generated backbones strictly adhere to precise geometric constraints, transforming de novo design into a highly controllable and programmable engineering process.
-
+TiDE-Ab demonstrates high practical utility by navigating complex therapeutic design scenarios that require programmable binding specificity. By successfully targeting a wide range of user-defined epitopes on the same antigen —from highly selective patches to broad conserved surfaces— TiDE-Ab ensures generated backbones strictly adhere to precise geometric constraints, transforming de novo design into a highly controllable and programmable engineering process.
 
 <table align="center" width="95%">
   <tr valign="top">
@@ -39,43 +34,34 @@ By successfully targeting a wide range of user-defined epitopes on the same anti
   </tr>
 </table>
 
-
 ## ⚙️ Installation
 
-Select an installation method based on your environment. **Conda** is highly recommended for a clean setup. These guides assume you are using **CUDA 12.4**.
+[Pixi](https://pixi.sh/) is recommended for reproducible and fast environment management. These guides assume you are using **CUDA 12.4**.
 
-### Option 1: Quick Install (Conda)
-*Best if your system supports CUDA 12.4. This sets up everything in one command.*
+### Option 1: Quick Install (Pixi) - _Recommended_
+
+_Sets up the complete environment and dependencies automatically._
+
+1. **Install Pixi** (if not already installed):
 
 ```bash
-# Create and activate conda environment
-conda env create -f environment.yml
-conda activate tideab
+curl -fsSL https://pixi.sh/install.sh | bash
 ```
 
-### Option 2: Step-by-Step Install (Pip)
+2. **Install dependencies**:
 
-*Best for custom setups or different CUDA versions.*
-
-**1. Environment Setup**
 ```bash
-conda create -n tideab python=3.10 -y
-conda activate tideab
+pixi install
 ```
 
-**2. Install PyTorch & Specialized Packages** (*Change `cu124` to `cu118` or other versions if necessary*)
+3. **Activate the environment** (optional, or run commands directly with `pixi run <task/command>`):
+
 ```bash
-pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124
-pip install torch-scatter -f https://data.pyg.org/whl/torch-$(python -c "import torch; print(torch.__version__.split('+')[0])")+cu124.html
+pixi shell
 ```
-
-**3. Install Remaining Dependencies**
-```bash
-pip install -r requirements.txt
-```
-
 
 ## 📂 Data Preparation
+
 The model is trained on antibody-antigen complexes from the **SAbDab** database (cutoff: April 30, 2020). The dataset is managed through metadata files in `data/splits/`.
 
 ```bash
@@ -87,45 +73,76 @@ The model is trained on antibody-antigen complexes from the **SAbDab** database 
 ```
 
 The metadata files in data/splits/ follow this schema:
-| Column | Description |
-| :--- | :--- |
-| **pdb_name** | Unique identifier for the complex (e.g., `1yy9_D_C_A`). |
-| **num_chains** | Total number of chains in the structure. |
-| **seq_len** | Total sequence length of the complex. |
-| **cluster** | Interaction cluster ID used for balanced sampling. |
 
+| Column         | Description                                             |
+| :------------- | :------------------------------------------------------ |
+| **pdb_name**   | Unique identifier for the complex (e.g., `1yy9_D_C_A`). |
+| **num_chains** | Total number of chains in the structure.                |
+| **seq_len**    | Total sequence length of the complex.                   |
+| **cluster**    | Interaction cluster ID used for balanced sampling.      |
 
 ## 🚀 Running the Code
+
+You can run scripts either within `pixi shell` or directly using `pixi run`.
 
 ### Training
 
 Run with default settings or override parameters via command line:
+
 ```bash
+# Using pixi task:
+pixi run train experiment.optimizer.lr=0.0005
+
+# Or inside pixi shell / python directly:
 python train.py experiment.optimizer.lr=0.0005  # (Optional) parameter override
 ```
 
 ### Inference
 
-**1. Download Pre-trained Weights**
-   Download [**weights.pt**](https://drive.google.com/file/d/1VApyhdaiZxcULLts_a34n9RbB0JNOFoZ/view?usp=share_link) and place it in any directory of your choice (e.g., `checkpoints/`).
+Pre-trained weights are located at `checkpoints/tideab_weights.pt` (used automatically by default).
 
-**2. Run Inference on Test Set**
-   Provide the path to your weights and the desired output directory as arguments:
-   ```bash
-   python inference.py weight_path=<PATH_TO_WEIGHTS> inference_dir=<OUTPUT_DIR>
-   ```
+#### Option A: Target Antigen De Novo Design (Recommended)
+You can directly design standard antibodies (Fv) or single-domain antibodies (**VHH / Nanobodies**) against a target antigen PDB file with optional epitope/hotspot residues and sample count:
+
+```bash
+# Standard Antibody (Fv heavy + light chain scaffold)
+pixi run inference --input demo/inputs/3eo1.pdb --output_dir results/
+
+# VHH / Nanobody Design (single-domain heavy chain scaffold)
+pixi run inference --input demo/inputs/3eo1.pdb --vhh --output_dir results/vhh_design/
+
+# With custom hotspot residues (1-based on antigen chain) and sample count
+pixi run inference --input demo/inputs/3eo1.pdb --vhh --hotspots 142 143 144 204 205 206 --num_samples 3 --output_dir results/3eo1_vhh_design/
+```
+
+Options available for `inference.py`:
+- `--input, -i`: Path to the antigen PDB structure (e.g., `demo/inputs/3eo1.pdb`).
+- `--vhh`: Use single-domain antibody (VHH / Nanobody) mode (automatically sets scaffold to `demo/inputs/vhh_scaffold.pdb`).
+- `--hotspots, -hs`: (Optional) 1-based residue numbers specifying epitope hotspots.
+- `--num_samples, -n`: Number of antibody candidates to generate (default: `1`).
+- `--output_dir, -o`: Directory to save generated complexes and trajectories (default: `./results`).
+- `--antibody, -ab`: (Optional) Custom antibody/VHH scaffold template PDB (default: `demo/inputs/hu-4D5-8_Fv.pdb`).
+- `--weights_path, -w`: Path to model checkpoint (default: `checkpoints/tideab_weights.pt`).
+
+#### Option B: Benchmark Test Set Evaluation
+To evaluate on the full processed test dataset (SAbDab split):
+```bash
+pixi run inference --output_dir results/test_eval/
+```
 
 ### Demo
-We provide an easy‑to‑run demo for epitope‑specific antibody design in the `run_demo.ipynb`.  
-In this demo, you are required to provide a PDB file containing your target antigen.
-The antibody design starts from the trastuzumab Fv fragment, from which the model resamples the CDR loops while preserving the framework structure, enabling de novo redesign of antibodies that bind the antigen in diverse binding modes.
 
+We provide an easy‑to‑run demo for epitope‑specific antibody design in `run_demo.ipynb`. In this demo, you provide a PDB file containing your target antigen. The model then resamples the CDR loops while preserving the antibody framework structure, enabling de novo redesign of antibodies that bind the antigen in diverse binding modes. Both **standard Fv antibodies** (`demo/inputs/hu-4D5-8_Fv.pdb`) and **single-domain VHH nanobodies** (`demo/inputs/vhh_scaffold.pdb`) are supported.
 
+To run the Jupyter notebook with Pixi:
+
+```bash
+pixi run jupyter
+# Or launch run_demo.ipynb directly inside your preferred editor (VS Code, JupyterLab) with the `.pixi/envs/default` kernel.
+```
 
 ## 🙏 Acknowledgements
 
 This codebase is developed based on the [**FrameFlow**](https://github.com/microsoft/protein-frame-flow/tree/main) repository. We thank the original authors for their pioneering work on $SE(3)$ flow matching for protein structures.
-
-
 
 This project is licensed under the MIT License - see the LICENSE file for details.
